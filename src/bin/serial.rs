@@ -1,12 +1,14 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::ErrorKind;
 
-    use serialport::SerialPortBuilder;
-
     // Create a new serial port builder
-    let builder = SerialPortBuilder::new().port("COM1").baud_rate(115200);
+    let builder = serialport::new("COM1", 115200);
 
     let mut port = builder.build()?;
+
+    let bytes_to_read = port.bytes_to_read()?;
+    println!("Bytes to read: {}", bytes_to_read);
+
     port.close()?;
 
     match port.open() {

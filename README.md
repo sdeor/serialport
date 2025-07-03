@@ -49,17 +49,11 @@ serialport = { git = "https://github.com/sdeor/serialport" }
 ```rust
 use std::io::{Read, Write};
 use std::time::Duration;
-use serialport::{
-    builder::SerialPortBuilder,
-    config::{DataBits, FlowControl, Parity, StopBits},
-};
+use serialport::config::{DataBits, FlowControl, Parity, StopBits};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create and configure a serial port
-    let mut port = SerialPortBuilder::new()
-        .port("COM1") // Windows
-        // .port("/dev/ttyUSB0")                // Linux
-        .baud_rate(115200)
+    let mut port = serialport::new("COM1", 9600)
         .data_bits(DataBits::Eight)
         .parity(Parity::None)
         .stop_bits(StopBits::One)
@@ -94,11 +88,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use std::time::Duration;
 use std::io::{Read, ErrorKind};
-use serialport::SerialPortBuilder;
 
-let mut port = SerialPortBuilder::new()
-    .port("COM1")
-    .baud_rate(115200)
+let mut port = serialport::new("COM1", 115200)
     .timeout(Duration::from_secs(0))  // Non-blocking
     .build()?;
 
@@ -111,17 +102,14 @@ match port.read(&mut buffer) {
     }
     Err(e) => eprintln!("Error: {}", e),
 }
+
+Ok::<(), std::io::Error>(())
 ```
 
 ### Port Lifecycle Management
 
 ```rust
-use serialport::SerialPortBuilder;
-
-let mut port = SerialPortBuilder::new()
-    .port("COM1")
-    .baud_rate(9600)
-    .build()?;
+let mut port = serialport::new("COM1", 9600).build()?;
 
 // Check if port is open
 if port.is_open() {
@@ -137,23 +125,19 @@ port.open()?;
 println!("Port reopened");
 
 // Switch to a different port
-port.set_port("COM2")?;  // Automatically closes COM1 and opens COM2
-println!("Now using COM2");
+port.set_path("COM3".into())?;  // Automatically closes COM1 and opens COM3
+println!("Now using COM3");
+
+Ok::<(), std::io::Error>(())
 ```
 
 ### Runtime Configuration Changes
 
 ```rust
 use std::time::Duration;
-use serialport::{
-    builder::SerialPortBuilder,
-    config::{DataBits, FlowControl, Parity, StopBits},
-};
+use serialport::config::{DataBits, FlowControl, Parity, StopBits};
 
-let mut port = SerialPortBuilder::new()
-    .port("COM1")
-    .baud_rate(9600)
-    .build()?;
+let mut port = serialport::new("COM1", 9600).build()?;
 
 // Change settings at runtime
 port.set_baud_rate(115200)?;
@@ -164,6 +148,8 @@ port.set_flow_control(FlowControl::Hardware)?;
 port.set_timeout(Duration::from_millis(500))?;
 
 println!("Configuration updated!");
+
+Ok::<(), std::io::Error>(())
 ```
 
 ## 🛠️ Advanced Features
@@ -171,14 +157,12 @@ println!("Configuration updated!");
 ### Port Discovery
 
 ```rust
-use serialport::SerialPort;
-
 // List available ports
-match SerialPort::available_ports() {
+match serialport::available_ports() {
     Ok(ports) => {
         println!("Available ports:");
         for port in ports {
-            println!("  {}", port);
+            println!("  {}", port.port_name);
         }
     }
     Err(e) => eprintln!("Failed to list ports: {}", e),
@@ -192,6 +176,8 @@ The library provides detailed error information:
 ```rust
 use std::io::ErrorKind;
 
+let mut port = serialport::new("COM1", 9600).build()?;
+
 match port.open() {
     Ok(()) => println!("Port opened successfully"),
     Err(e) => match e.kind() {
@@ -201,6 +187,8 @@ match port.open() {
         _ => println!("Other error: {}", e),
     }
 }
+
+Ok::<(), std::io::Error>(())
 ```
 
 ## 🎯 Use Cases

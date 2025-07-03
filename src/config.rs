@@ -177,3 +177,61 @@ impl fmt::Display for StopBits {
         }
     }
 }
+
+/// Specifies which buffer(s) to clear in a serial port.
+///
+/// Used to indicate whether to clear the input buffer, output buffer, or both.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ClearBuffer {
+    /// Specify to clear data received but not read
+    Input,
+    /// Specify to clear data written but not yet transmitted
+    Output,
+    /// Specify to clear both data received and data not yet transmitted
+    All,
+}
+
+/// Contains all possible USB information about a `SerialPort`
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct UsbPortInfo {
+    /// Vendor ID
+    pub vid: u16,
+    /// Product ID
+    pub pid: u16,
+    /// Serial number (arbitrary string)
+    pub serial_number: Option<String>,
+    /// Manufacturer (arbitrary string)
+    pub manufacturer: Option<String>,
+    /// Product name (arbitrary string)
+    pub product: Option<String>,
+    /// The interface index of the USB serial port. This can be either the interface number of
+    /// the communication interface (as is the case on Windows and Linux) or the data
+    /// interface (as is the case on macOS), so you should recognize both interface numbers.
+    pub interface: Option<u8>,
+}
+
+/// The physical type of a `SerialPort`
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum SerialPortType {
+    /// The serial port is connected via USB
+    UsbPort(UsbPortInfo),
+    /// The serial port is connected via PCI (permanent port)
+    PciPort,
+    /// The serial port is connected via Bluetooth
+    BluetoothPort,
+    /// It can't be determined how the serial port is connected
+    Unknown,
+}
+
+/// A device-independent implementation of serial port information
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SerialPortInfo {
+    /// The short name of the serial port
+    pub port_name: String,
+    /// The hardware device type that exposes this port
+    pub port_type: SerialPortType,
+}

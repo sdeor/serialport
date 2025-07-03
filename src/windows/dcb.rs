@@ -3,10 +3,10 @@ use winapi::{
     um::{commapi, winbase, winnt::HANDLE},
 };
 
-use crate::builder::SerialPortBuilder;
+use crate::SerialPortBuilder;
 use crate::config::{DataBits, FlowControl, Parity, StopBits};
 
-use super::winapi_result;
+use super::com::winapi_result;
 
 #[must_use]
 pub(super) struct WindowsDCB {

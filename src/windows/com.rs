@@ -11,11 +11,12 @@ use winapi::um::{
     },
 };
 
-use super::dcb;
 use crate::{
     SerialPort, SerialPortBuilder,
+    communication::Communication,
     config::{ClearBuffer, DataBits, FlowControl, Parity, StopBits},
     private,
+    windows::dcb,
 };
 
 pub(super) fn winapi_result(result: BOOL) -> io::Result<()> {
@@ -32,11 +33,11 @@ pub struct ComPort {
 }
 
 impl ComPort {
-    pub fn new(builder: &SerialPortBuilder) -> io::Result<Self> {
+    pub fn new(builder: SerialPortBuilder) -> io::Result<Self> {
         let mut serialport = Self {
             is_open: false,
             handle: INVALID_HANDLE_VALUE,
-            builder: builder.clone(),
+            builder,
         };
 
         if !serialport.builder.path.is_empty() {
@@ -105,7 +106,7 @@ impl ComPort {
     }
 }
 
-impl SerialPort for ComPort {
+impl Communication for ComPort {
     fn is_open(&self) -> bool {
         self.is_open
     }
@@ -167,7 +168,9 @@ impl SerialPort for ComPort {
 
         Ok(())
     }
+}
 
+impl SerialPort for ComPort {
     fn try_clone(&self) -> io::Result<Box<dyn SerialPort>> {
         self.try_clone_native()
             .map(|port| Box::new(port) as Box<dyn SerialPort>)

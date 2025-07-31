@@ -64,6 +64,7 @@
 
 use std::{io, time::Duration};
 
+pub mod communication;
 pub mod config;
 
 #[cfg(windows)]
@@ -71,6 +72,7 @@ mod windows;
 #[cfg(windows)]
 pub use windows::ComPort;
 
+use communication::Communication;
 use config::{
     ClearBuffer, DataBits, FlowControl, Parity, SerialPortInfo, SerialPortType, StopBits,
     UsbPortInfo,
@@ -341,7 +343,7 @@ impl SerialPortBuilder {
     #[must_use]
     pub fn build(self) -> io::Result<Box<dyn SerialPort>> {
         #[cfg(windows)]
-        return ComPort::new(&self).map(|port| Box::new(port) as Box<dyn SerialPort>);
+        return ComPort::new(self).map(|port| Box::new(port) as Box<dyn SerialPort>);
 
         // Placeholder for non-Windows implementation
         #[cfg(not(windows))]
@@ -363,6 +365,23 @@ impl Default for SerialPortBuilder {
 
 mod private {
     pub trait Private {
+        /// Sets the raw path of the serial port.
+        /// This method is used internally to change the port path
+        /// and must be implemented by all serial port types.
+        ///
+        /// # Arguments
+        ///
+        /// * `path` - The new port path
+        ///
+        /// # Returns
+        ///
+        /// Returns `Ok(())` if the port path was successfully changed,
+        /// or an error if the operation failed.
+        ///
+        /// # Safety
+        ///
+        /// This method is unsafe because it allows changing the port path
+        /// without checking if the port is currently open.
         fn set_raw_path<'a>(&mut self, path: std::borrow::Cow<'a, str>) -> std::io::Result<()>;
     }
 }
@@ -432,99 +451,7 @@ mod private {
 ///
 /// Implement this trait for platform-specific serial port types to provide
 /// a unified API for serial communication.
-pub trait SerialPort: Send + io::Read + io::Write + private::Private {
-    /// Checks if the serial port is currently open.
-    ///
-    /// # Returns
-    ///
-    /// Returns `true` if the port is open and ready for I/O operations,
-    /// `false` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use serialport::SerialPortBuilder;
-    ///
-    /// let mut port = SerialPortBuilder::new()
-    ///     .path("COM1".into())
-    ///     .build()?;
-    ///
-    /// if port.is_open() {
-    ///     println!("Port is ready for communication");
-    /// } else {
-    ///     port.open()?;
-    /// }
-    /// # Ok::<(), std::io::Error>(())
-    /// ```
-    fn is_open(&self) -> bool;
-
-    /// Opens the serial port for communication.
-    ///
-    /// This method must be called before any I/O operations can be performed.
-    /// If the port is already open, this method returns an error.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` if the port was successfully opened, or an error
-    /// if opening failed.
-    ///
-    /// # Errors
-    ///
-    /// This method can fail if:
-    /// - The port is already open
-    /// - The port path is invalid or empty
-    /// - The port is in use by another process
-    /// - Insufficient permissions to access the port
-    /// - Hardware is not available
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use serialport::SerialPortBuilder;
-    ///
-    /// let mut port = SerialPortBuilder::new()
-    ///     .path("COM1".into())
-    ///     .build()?;
-    ///
-    /// let result = port.open();
-    /// assert!(result.is_err());
-    /// assert_eq!(
-    ///     result.unwrap_err().kind(),
-    ///     std::io::ErrorKind::AlreadyExists
-    /// );
-    ///
-    /// # Ok::<(), std::io::Error>(())
-    /// ```
-    fn open(&mut self) -> std::io::Result<()>;
-
-    /// Closes the serial port.
-    ///
-    /// After calling this method, no I/O operations can be performed until
-    /// the port is reopened with `open()`. If the port is already closed,
-    /// this method does nothing and returns success.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` if the port was successfully closed, or an error
-    /// if closing failed.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use serialport::SerialPortBuilder;
-    ///
-    /// let mut port = SerialPortBuilder::new()
-    ///     .path("COM1".into())
-    ///     .build()?;
-    ///
-    /// // Use the port...
-    ///
-    /// port.close()?;
-    /// println!("Port closed successfully");
-    /// # Ok::<(), std::io::Error>(())
-    /// ```
-    fn close(&mut self) -> std::io::Result<()>;
-
+pub trait SerialPort: Send + Communication + io::Read + io::Write + private::Private {
     /// Creates a clone of this serial port handle.
     ///
     /// This allows you to read and write simultaneously from the same serial
